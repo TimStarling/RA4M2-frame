@@ -1,70 +1,70 @@
 #include "bsp_system.h"
+
 extern system_parameter sp;
-uint8_t key_val = 0;  // µ±Ç°°´¼ü×´Ì¬
-uint8_t key_old = 0;  // Ç°Ò»°´¼ü×´Ì¬
-uint8_t key_down = 0; // °´ÏÂµÄ°´¼ü
-uint8_t key_up = 0;   // ÊÍ·ÅµÄ°´¼ü
 
-uint32_t Key_Scan(bsp_io_port_pin_t key)
- {
-	bsp_io_level_t state;
- //¶ÁÈ¡°´¼üÒı½ÅµçÆ½
-	R_IOPORT_PinRead(&g_ioport_ctrl,key,&state);
-	if (BSP_IO_LEVEL_HIGH == state)
-	{
-		return 0;//°´¼üÃ»ÓĞ±»°´ÏÂ
-	}
-	 else
-	{
-		do //µÈ´ı°´¼üÊÍ·Å
-		{
-			R_IOPORT_PinRead(&g_ioport_ctrl,key,&state);
-		}while (BSP_IO_LEVEL_LOW== state);
-	 }
-	 return 1; //°´¼ü±»°´ÏÂÁË
-}
+uint8_t key_val = 0;  // å½“å‰æŒ‰é”®çŠ¶æ€ä½å›¾
+uint8_t key_old = 0;  // ä¸Šä¸€æ¬¡æŒ‰é”®çŠ¶æ€ä½å›¾
+uint8_t key_down = 0; // æœ¬æ¬¡æŒ‰ä¸‹äº‹ä»¶ä½å›¾
+uint8_t key_up = 0;   // æœ¬æ¬¡æŠ¬èµ·äº‹ä»¶ä½å›¾
 
-uint8_t key_read()
+#define KEY2_MASK (1U << 0)
+#define KEY3_MASK (1U << 1)
+#define KEY4_MASK (1U << 2)
+
+static uint8_t Key_IsPressed(bsp_io_port_pin_t key)
 {
-	uint8_t temp = 0;
-	if(Key_Scan(BSP_IO_PORT_01_PIN_11) == 1)temp = 2;
-	if(Key_Scan(BSP_IO_PORT_01_PIN_12) == 1)temp = 3;
-	if(Key_Scan(BSP_IO_PORT_00_PIN_13) == 1)temp = 4;
-	return temp;
+    bsp_io_level_t state;
+
+    // æŒ‰é”®ä½ç”µå¹³æœ‰æ•ˆï¼šLOW = æŒ‰ä¸‹ï¼ŒHIGH = æ¾å¼€
+    R_IOPORT_PinRead(&g_ioport_ctrl, key, &state);
+    return (state == BSP_IO_LEVEL_LOW) ? 1U : 0U;
 }
 
+static uint8_t key_read(void)
+{
+    uint8_t state = 0;
+
+    if (Key_IsPressed(BSP_IO_PORT_01_PIN_11)) state |= KEY2_MASK;
+    if (Key_IsPressed(BSP_IO_PORT_01_PIN_12)) state |= KEY3_MASK;
+    if (Key_IsPressed(BSP_IO_PORT_00_PIN_13)) state |= KEY4_MASK;
+
+    return state;
+}
 
 /*
-	°´¼ü¼ì²âº¯Êı
-	K2 K3 K4°´¼ü°´ÏÂ¶ÔÓ¦µÄÊıÖµË¢ĞÂÎª 
-	Èç£ºK2°´ÏÂÊ±key_upÎª2 ÆäËûÊ±¿ÌÎª0 
-		K2µ¯ÆğÊ±key_downÎª2 ÆäËûÊ±¿ÌÎª0 
-		K2³¤°´Ê±key_oldÎª2 ÆäËûÊ±¿ÌÎª0 
-*/
-void key_proc()
+ * æŒ‰é”®çŠ¶æ€æ£€æµ‹ï¼š
+ * key_down ä»…åœ¨æŒ‰ä¸‹è¾¹æ²¿ç½®ä½ï¼Œkey_up ä»…åœ¨æŠ¬èµ·è¾¹æ²¿ç½®ä½ã€‚
+ * ä¾‹å¦‚ K2ï¼š
+ *   æŒ‰ä¸‹ç¬é—´ key_down åŒ…å« KEY2_MASK
+ *   æŠ¬èµ·ç¬é—´ key_up   åŒ…å« KEY2_MASK
+ */
+void key_proc(void)
 {
-	// ¶ÁÈ¡µ±Ç°°´¼ü×´Ì¬
+    // è¯»å–å½“å‰æŒ‰é”®çŠ¶æ€ä½å›¾
     key_val = key_read();
-  // ¼ÆËã°´ÏÂµÄ°´¼ü£¨µ±Ç°°´ÏÂ×´Ì¬ÓëÇ°Ò»×´Ì¬Òì»ò£¬²¢Óëµ±Ç°×´Ì¬ÏàÓë£©
-    key_down = key_val & (key_old ^ key_val);
-  // ¼ÆËãÊÍ·ÅµÄ°´¼ü£¨µ±Ç°Î´°´ÏÂ×´Ì¬ÓëÇ°Ò»×´Ì¬Òì»ò£¬²¢ÓëÇ°Ò»×´Ì¬ÏàÓë£©
-    key_up = ~key_val & (key_old ^ key_val);
-  // ¸üĞÂÇ°Ò»°´¼ü×´Ì¬
+
+    // æ£€æµ‹æŒ‰ä¸‹è¾¹æ²¿ï¼šå½“å‰ä¸º 1ï¼Œä¸Šä¸€æ‹ä¸º 0
+    key_down = key_val & (uint8_t)(~key_old);
+
+    // æ£€æµ‹æŠ¬èµ·è¾¹æ²¿ï¼šå½“å‰ä¸º 0ï¼Œä¸Šä¸€æ‹ä¸º 1
+    key_up = key_old & (uint8_t)(~key_val);
+
+    // ä¿å­˜çŠ¶æ€ç”¨äºä¸‹ä¸€æ¬¡è¾¹æ²¿æ£€æµ‹
     key_old = key_val;
-	
-	switch(key_down){
-		case 2:
-			/*¹¦ÄÜ£ºK2°´ÏÂÊ± sp.system_mode¼ÓÒ» ×î¶àµ½2*/
-			if(++sp.system_mode==2)sp.system_mode=0;
-			break;
-		case 3:
 
-			break;
-		case 4:
+    if (key_down & KEY2_MASK)
+    {
+        // åŠŸèƒ½ï¼šK2 æŒ‰ä¸‹æ—¶åˆ‡æ¢ system_modeï¼ˆ0/1ï¼‰
+        if (++sp.system_mode == 2) sp.system_mode = 0;
+    }
 
-			break;
+    if (key_down & KEY3_MASK)
+    {
+        // é¢„ç•™ï¼šK3 æŒ‰ä¸‹å¤„ç†
+    }
 
-		
-	}
-  
+    if (key_down & KEY4_MASK)
+    {
+        // é¢„ç•™ï¼šK4 æŒ‰ä¸‹å¤„ç†
+    }
 }
