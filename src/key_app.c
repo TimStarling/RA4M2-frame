@@ -1,70 +1,50 @@
 #include "bsp_system.h"
+#include "key_app.h"
+
 extern system_parameter sp;
-uint8_t key_val = 0;  // µ±Ç°°´¼ü×´Ì¬
-uint8_t key_old = 0;  // Ç°Ò»°´¼ü×´Ì¬
-uint8_t key_down = 0; // °´ÏÂµÄ°´¼ü
-uint8_t key_up = 0;   // ÊÍ·ÅµÄ°´¼ü
 
-uint32_t Key_Scan(bsp_io_port_pin_t key)
- {
-	bsp_io_level_t state;
- //¶ÁÈ¡°´¼üÒý½ÅµçÆ½
-	R_IOPORT_PinRead(&g_ioport_ctrl,key,&state);
-	if (BSP_IO_LEVEL_HIGH == state)
-	{
-		return 0;//°´¼üÃ»ÓÐ±»°´ÏÂ
-	}
-	 else
-	{
-		do //µÈ´ý°´¼üÊÍ·Å
-		{
-			R_IOPORT_PinRead(&g_ioport_ctrl,key,&state);
-		}while (BSP_IO_LEVEL_LOW== state);
-	 }
-	 return 1; //°´¼ü±»°´ÏÂÁË
+uint8_t key_val = 0;  // å½“å‰æŒ‰é”®çŠ¶æ€ä½å›¾
+uint8_t key_old = 0;  // ä¸Šä¸€æ¬¡æŒ‰é”®çŠ¶æ€ä½å›¾
+uint8_t key_down = 0; // æœ¬æ¬¡æŒ‰ä¸‹è¾¹æ²¿äº‹ä»¶
+uint8_t key_up = 0;   // æœ¬æ¬¡æŠ¬èµ·è¾¹æ²¿äº‹ä»¶
+
+static uint8_t key_is_pressed(bsp_io_port_pin_t pin)
+{
+    bsp_io_level_t state = BSP_IO_LEVEL_HIGH;
+    R_IOPORT_PinRead(&g_ioport_ctrl, pin, &state);
+    return (state == BSP_IO_LEVEL_LOW) ? 1U : 0U;
 }
 
-uint8_t key_read()
+static uint8_t key_read_state(void)
 {
-	uint8_t temp = 0;
-	if(Key_Scan(BSP_IO_PORT_01_PIN_11) == 1)temp = 2;
-	if(Key_Scan(BSP_IO_PORT_01_PIN_12) == 1)temp = 3;
-	if(Key_Scan(BSP_IO_PORT_00_PIN_13) == 1)temp = 4;
-	return temp;
+    uint8_t state = 0;
+
+    if (key_is_pressed(BSP_IO_PORT_01_PIN_11)) state |= KEY2_MASK;
+    if (key_is_pressed(BSP_IO_PORT_01_PIN_12)) state |= KEY3_MASK;
+    if (key_is_pressed(BSP_IO_PORT_00_PIN_13)) state |= KEY4_MASK;
+
+    return state;
 }
 
-
-/*
-	°´¼ü¼ì²âº¯Êý
-	K2 K3 K4°´¼ü°´ÏÂ¶ÔÓ¦µÄÊýÖµË¢ÐÂÎª 
-	Èç£ºK2°´ÏÂÊ±key_upÎª2 ÆäËûÊ±¿ÌÎª0 
-		K2µ¯ÆðÊ±key_downÎª2 ÆäËûÊ±¿ÌÎª0 
-		K2³¤°´Ê±key_oldÎª2 ÆäËûÊ±¿ÌÎª0 
-*/
-void key_proc()
+void key_proc(void)
 {
-	// ¶ÁÈ¡µ±Ç°°´¼ü×´Ì¬
-    key_val = key_read();
-  // ¼ÆËã°´ÏÂµÄ°´¼ü£¨µ±Ç°°´ÏÂ×´Ì¬ÓëÇ°Ò»×´Ì¬Òì»ò£¬²¢Óëµ±Ç°×´Ì¬ÏàÓë£©
-    key_down = key_val & (key_old ^ key_val);
-  // ¼ÆËãÊÍ·ÅµÄ°´¼ü£¨µ±Ç°Î´°´ÏÂ×´Ì¬ÓëÇ°Ò»×´Ì¬Òì»ò£¬²¢ÓëÇ°Ò»×´Ì¬ÏàÓë£©
-    key_up = ~key_val & (key_old ^ key_val);
-  // ¸üÐÂÇ°Ò»°´¼ü×´Ì¬
+    key_val = key_read_state();
+
+    /*
+     * è¾¹æ²¿æ£€æµ‹ï¼š
+     * key_down: 0->1
+     * key_up  : 1->0
+     */
+    key_down = (uint8_t)(key_val & (uint8_t)(~key_old));
+    key_up = (uint8_t)(key_old & (uint8_t)(~key_val));
+
     key_old = key_val;
-	
-	switch(key_down){
-		case 2:
-			/*¹¦ÄÜ£ºK2°´ÏÂÊ± sp.system_mode¼ÓÒ» ×î¶àµ½2*/
-			if(++sp.system_mode==2)sp.system_mode=0;
-			break;
-		case 3:
 
-			break;
-		case 4:
-
-			break;
-
-		
-	}
-  
+    if (key_down & KEY2_MASK)
+    {
+        if (++sp.system_mode >= 2)
+        {
+            sp.system_mode = 0;
+        }
+    }
 }
