@@ -1,6 +1,5 @@
 # RA4M2-frame
 
-<<<<<<< codex/add-readme-for-github-and-fix-button-issue-9iefjt
 一个基于 **Renesas RA4M2** 的嵌入式项目模板，适用于课程设计、功能验证和瑞萨综合测评场景。
 
 ## 1. 项目定位
