@@ -1,3 +1,9 @@
+<div align="right">
+
+[中文](README.md) | [English](README_EN.md)
+
+</div>
+
 # RA4M2-frame
 
 一个基于 **Renesas RA4M2** 的嵌入式项目模板，适用于课程设计、功能验证和瑞萨综合测评场景。
